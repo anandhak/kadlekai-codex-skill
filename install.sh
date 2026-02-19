@@ -23,7 +23,7 @@ if [[ -f "${CODEX_CONFIG}" ]] && grep -q '\[mcp_servers\.kadlekai\]' "${CODEX_CO
 else
   echo "    Adding MCP server config to ${CODEX_CONFIG}..."
   mkdir -p "$(dirname "${CODEX_CONFIG}")"
-  cat >> "${CODEX_CONFIG}" <<'EOF'
+  cat >> "${CODEX_CONFIG}" <<EOF
 
 [mcp_servers.kadlekai]
 command = "node"
@@ -43,6 +43,9 @@ TMP_TGZ="$(mktemp /tmp/kadlekai-mcp-XXXXXX.tgz)"
 curl -fsSL "${MCP_S3_URL}" -o "${TMP_TGZ}"
 tar -xzf "${TMP_TGZ}" -C "${MCP_DIR}" --strip-components=1
 rm -f "${TMP_TGZ}"
+echo "    Installing MCP server dependencies..."
+(cd "${MCP_DIR}" && npm install --omit=dev --silent)
+echo "    ✓ Dependencies installed"
 echo "    ✓ MCP server extracted to ${MCP_DIR}"
 
 # 4. Post-install instructions

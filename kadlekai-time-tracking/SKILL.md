@@ -22,7 +22,7 @@ args = ["/absolute/path/to/kadlekai/mcp-server/dist/index.js"]
 
 [mcp_servers.kadlekai.env]
 KADLEKAI_API_TOKEN = "your_token_here"
-KADLEKAI_API_URL = "https://kadle.ai"
+KADLEKAI_API_URL = "https://kadle.beskar.tech"
 ```
 
 Or use the CLI if your Codex version supports it:
@@ -30,7 +30,7 @@ Or use the CLI if your Codex version supports it:
 ```bash
 codex mcp add kadlekai \
   --env KADLEKAI_API_TOKEN=your_token \
-  --env KADLEKAI_API_URL=https://kadle.ai \
+  --env KADLEKAI_API_URL=https://kadle.beskar.tech \
   -- node /absolute/path/to/kadlekai/mcp-server/dist/index.js
 ```
 
@@ -55,13 +55,20 @@ cp /path/to/kadlekai/codex/skills/kadlekai-time-tracking/SKILL.md \
    ~/.codex/skills/kadlekai-time-tracking/SKILL.md
 ```
 
+> **URL drift fix:** If the MCP server returns `ENOTFOUND`, an old install wrote `kadle.ai`
+> to your config. Fix it:
+> ```bash
+> sed -i '' 's|kadle\.ai|kadle.beskar.tech|g' ~/.codex/config.toml
+> ```
+> Then restart Codex.
+
 ---
 
 ## Available MCP Tools
 
 | Tool | Description |
 |---|---|
-| `start_timer` | Start a new timer (auto-stops any running timer) |
+| `start_timer` | Start a new timer (always call get_running_timer first) |
 | `stop_timer` | Stop the running timer (requires project + description) |
 | `get_running_timer` | Check if a timer is running and its elapsed time |
 | `create_worklog` | Create a completed time entry for a past period |
@@ -96,7 +103,8 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
    Wait for explicit confirmation before calling `create_worklog`.
 
 5. **Handle overlaps** — if a new entry overlaps an existing worklog, show both and ask the user:
-   > "Entry A already covers part of this time. Keep existing / replace / split?"
+   > "Entry A already covers [X minutes] of this time. What should I do?
+   > 1. Keep existing  2. Replace existing  3. Split into two entries"
    Never auto-merge or auto-delete without user approval.
 
 6. **Create the entry** — call `create_worklog` with confirmed params.
@@ -110,7 +118,7 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
 | User says | What to do |
 |---|---|
 | "start timer [description]" | `get_running_timer` → warn if one is already running → `start_timer` |
-| "stop timer" | `stop_timer` — if project is missing, ask before stopping |
+| "stop timer" | call `get_running_timer` first; if none active, tell user; otherwise `stop_timer` (ask for project/description if missing) |
 | "log X hours [description]" | Ask for project, compute start/end from now, `create_worklog` |
 | "timer status" | `get_running_timer` → display elapsed time and description |
 | "report [today/this week/this month]" | `generate_report` with the matching time_frame |
@@ -125,7 +133,7 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
 > and ask: "Are you sure you want to delete this worklog? (yes/no)" Then wait for an explicit
 > "yes" or "confirm" in the user's reply. Never call `delete_worklog` without this step.
 
-> **SAFETY — overlaps:** During reconcile, if any proposed new entry overlaps an existing
+> **SAFETY — overlaps:** If any proposed new or updated entry overlaps an existing
 > worklog, STOP and present both, then ask: "Keep existing / replace existing / split?"
 > Never create, update, or delete worklogs to resolve an overlap without an explicit user
 > instruction in the same turn.
@@ -134,5 +142,5 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
 - **Always confirm on overlaps** — never auto-merge, auto-split, or auto-delete.
 - **Keep descriptions terse** — ≤ 100 chars. Prefer issue refs like `"Fix #42"` over prose.
 - **Omit timezone** — the server uses the user's stored preference.
-- **No running timer check** — before starting a new timer, always call `get_running_timer` first and warn if one is already active.
+- **Running timer check** — before starting a new timer, always call `get_running_timer` first and warn if one is already active.
 - **State file** — write reconcile timestamps to `~/.codex/kadle/state.json` (create dir if needed).
