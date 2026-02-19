@@ -31,7 +31,7 @@ args = ["${HOME}/.codex/kadle/mcp/dist/index.js"]
 
 [mcp_servers.kadlekai.env]
 KADLEKAI_API_TOKEN = ""
-KADLEKAI_API_URL = "https://kadle.ai"
+KADLEKAI_API_URL = "https://kadle.beskar.tech"
 EOF
   echo "    ✓ MCP config added"
 fi
@@ -65,7 +65,7 @@ echo ""
 echo "  2. Set your environment variables:"
 echo ""
 echo "     export KADLEKAI_API_TOKEN=your_token_here"
-echo "     export KADLEKAI_API_URL=https://kadle.ai"
+echo "     export KADLEKAI_API_URL=https://kadle.beskar.tech"
 echo ""
 echo "  3. Edit ${CODEX_CONFIG} and fill in KADLEKAI_API_TOKEN."
 echo ""
