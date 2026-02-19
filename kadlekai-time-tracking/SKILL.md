@@ -92,15 +92,20 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
 1. **Gather session context** — ask:
    > "When did you start working today? What did you work on? Give me a start time, end time (or duration), and a brief description."
 
-2. **Check existing entries** — call `list_worklogs` for today to detect any already-logged time and find overlaps.
+2. **Check existing entries** — call `list_worklogs` for today. For each returned entry,
+   compare its `[start_time, end_time]` against the proposed new entry's time range.
+   **An overlap exists when: `proposed_start < existing_end AND proposed_end > existing_start`.**
+   Note any overlapping entries — they are used in step 5.
 
 3. **Suggest a project** — call `list_projects`, then fuzzy-match against:
    - The current repo directory name (e.g. `kadlekai` → project named "Kadlekai")
    - Any project or task names mentioned by the user
 
-4. **Confirm before creating** — always present a summary and ask:
+4. **Confirm before creating** — if NO overlapping entries were found in step 2, present a
+   summary and ask:
    > "I'll log X hours to project Y — description: 'Z'. Does that look right?"
    Wait for explicit confirmation before calling `create_worklog`.
+   **If any overlap was found in step 2, skip this step and go directly to step 5.**
 
 5. **Handle overlaps** — if a new entry overlaps an existing worklog, show both and ask the user:
    > "Entry A already covers [X minutes] of this time. What should I do?
@@ -133,8 +138,10 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
 > and ask: "Are you sure you want to delete this worklog? (yes/no)" Then wait for an explicit
 > "yes" or "confirm" in the user's reply. Never call `delete_worklog` without this step.
 
-> **SAFETY — overlaps:** If any proposed new or updated entry overlaps an existing
-> worklog, STOP and present both, then ask: "Keep existing / replace existing / split?"
+> **SAFETY — overlaps:** Before calling `create_worklog` or `update_worklog`, verify the
+> time range against existing entries using: `new_start < existing_end AND new_end > existing_start`.
+> If any overlap exists, STOP — do NOT proceed to confirmation. Present both entries with the
+> overlap duration in minutes, then ask: "Keep existing / replace existing / split?"
 > Never create, update, or delete worklogs to resolve an overlap without an explicit user
 > instruction in the same turn.
 

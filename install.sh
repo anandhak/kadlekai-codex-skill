@@ -44,7 +44,7 @@ curl -fsSL "${MCP_S3_URL}" -o "${TMP_TGZ}"
 tar -xzf "${TMP_TGZ}" -C "${MCP_DIR}" --strip-components=1
 rm -f "${TMP_TGZ}"
 echo "    Installing MCP server dependencies..."
-(cd "${MCP_DIR}" && npm install --omit=dev --silent)
+(cd "${MCP_DIR}" && npm install --omit=dev --ignore-scripts --silent)
 echo "    ✓ Dependencies installed"
 echo "    ✓ MCP server extracted to ${MCP_DIR}"
 
