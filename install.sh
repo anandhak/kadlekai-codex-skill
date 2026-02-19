@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Kadlekai Time Tracking — Codex Skill Installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/beskar-labs/kadlekai-codex-skill/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/anandhak/kadlekai-codex-skill/main/install.sh | bash
 set -euo pipefail
 
 SKILL_DIR="${HOME}/.codex/skills/kadlekai-time-tracking"
 CODEX_CONFIG="${HOME}/.codex/config.toml"
 MCP_DIR="${HOME}/.codex/kadle/mcp"
 MCP_S3_URL="https://beskar-kadlekai-mcp.s3.amazonaws.com/packages/kadlekai-mcp-latest.tgz"
-SKILL_RAW_URL="https://raw.githubusercontent.com/beskar-labs/kadlekai-codex-skill/main/kadlekai-time-tracking/SKILL.md"
+SKILL_RAW_URL="https://raw.githubusercontent.com/anandhak/kadlekai-codex-skill/main/kadlekai-time-tracking/SKILL.md"
 
 echo "==> Installing Kadlekai Time Tracking skill for Codex..."
 

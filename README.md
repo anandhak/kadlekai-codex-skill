@@ -5,14 +5,14 @@ A [Codex](https://github.com/openai/codex) skill that lets you track time in [Ka
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/beskar-labs/kadlekai-codex-skill/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/anandhak/kadlekai-codex-skill/main/install.sh | bash
 ```
 
 Or install manually:
 
 ```bash
 mkdir -p ~/.codex/skills/kadlekai-time-tracking
-curl -fsSL https://raw.githubusercontent.com/beskar-labs/kadlekai-codex-skill/main/kadlekai-time-tracking/SKILL.md \
+curl -fsSL https://raw.githubusercontent.com/anandhak/kadlekai-codex-skill/main/kadlekai-time-tracking/SKILL.md \
   -o ~/.codex/skills/kadlekai-time-tracking/SKILL.md
 ```
 
