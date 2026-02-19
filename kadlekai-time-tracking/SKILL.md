@@ -1,0 +1,138 @@
+---
+name: kadlekai-time-tracking
+description: Track time in Kadlekai from a Codex session — start/stop timers, log work, reconcile session worklogs, and query time reports; use when user asks to start a timer, stop a timer, log hours, reconcile worklogs, check timer status, or generate a time report.
+---
+
+# Kadlekai Time Tracking — Codex Skill
+
+Use this skill to track time in Kadlekai directly from Codex sessions. It covers reconciling session work into worklogs, controlling timers, and querying reports.
+
+---
+
+## Setup
+
+### 1. Add Kadlekai MCP to Codex
+
+Add the following to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.kadlekai]
+command = "node"
+args = ["/absolute/path/to/kadlekai/mcp-server/dist/index.js"]
+
+[mcp_servers.kadlekai.env]
+KADLEKAI_API_TOKEN = "your_token_here"
+KADLEKAI_API_URL = "https://kadle.ai"
+```
+
+Or use the CLI if your Codex version supports it:
+
+```bash
+codex mcp add kadlekai \
+  --env KADLEKAI_API_TOKEN=your_token \
+  --env KADLEKAI_API_URL=https://kadle.ai \
+  -- node /absolute/path/to/kadlekai/mcp-server/dist/index.js
+```
+
+### 2. Generate an API Token
+
+From the Kadlekai Rails app:
+
+```bash
+bin/rails runner "
+user = User.find_by(email: 'your@email.com')
+auth_service = AuthenticationService.new(current_user: user, request: nil)
+result = auth_service.create_api_key_for_user(user, client_name: 'Codex', expiry_hours: 720)
+puts 'Token: ' + result[:auth_token]
+"
+```
+
+### 3. Install this skill
+
+```bash
+mkdir -p ~/.codex/skills/kadlekai-time-tracking
+cp /path/to/kadlekai/codex/skills/kadlekai-time-tracking/SKILL.md \
+   ~/.codex/skills/kadlekai-time-tracking/SKILL.md
+```
+
+---
+
+## Available MCP Tools
+
+| Tool | Description |
+|---|---|
+| `start_timer` | Start a new timer (auto-stops any running timer) |
+| `stop_timer` | Stop the running timer (requires project + description) |
+| `get_running_timer` | Check if a timer is running and its elapsed time |
+| `create_worklog` | Create a completed time entry for a past period |
+| `update_worklog` | Update an existing worklog (description, times, project) |
+| `delete_worklog` | Delete a worklog entry |
+| `list_worklogs` | List entries filtered by date, project, or status |
+| `list_projects` | List all active projects in the workspace |
+| `generate_report` | Time summary for a date range or predefined period |
+| `process_natural_language_command` | Parse and execute a natural language time command |
+
+---
+
+## Reconciliation Flow
+
+Use when the user says "reconcile my worklogs", "log today's work", or "log this session".
+
+Since Codex has no hook events, reconciliation is session-based: ask the user to describe what they did.
+
+### Steps
+
+1. **Gather session context** — ask:
+   > "When did you start working today? What did you work on? Give me a start time, end time (or duration), and a brief description."
+
+2. **Check existing entries** — call `list_worklogs` for today to detect any already-logged time and find overlaps.
+
+3. **Suggest a project** — call `list_projects`, then fuzzy-match against:
+   - The current repo directory name (e.g. `kadlekai` → project named "Kadlekai")
+   - Any project or task names mentioned by the user
+
+4. **Confirm before creating** — always present a summary and ask:
+   > "I'll log X hours to project Y — description: 'Z'. Does that look right?"
+   Wait for explicit confirmation before calling `create_worklog`.
+
+5. **Handle overlaps** — if a new entry overlaps an existing worklog, show both and ask the user:
+   > "Entry A already covers part of this time. Keep existing / replace / split?"
+   Never auto-merge or auto-delete without user approval.
+
+6. **Create the entry** — call `create_worklog` with confirmed params.
+
+7. **Record reconcile time** — write `{"last_reconcile_at": "<ISO timestamp>"}` to `~/.codex/kadle/state.json`.
+
+---
+
+## Time Commands (Direct)
+
+| User says | What to do |
+|---|---|
+| "start timer [description]" | `get_running_timer` → warn if one is already running → `start_timer` |
+| "stop timer" | `stop_timer` — if project is missing, ask before stopping |
+| "log X hours [description]" | Ask for project, compute start/end from now, `create_worklog` |
+| "timer status" | `get_running_timer` → display elapsed time and description |
+| "report [today/this week/this month]" | `generate_report` with the matching time_frame |
+| "update worklog [id]" | Ask what to change, then `update_worklog` |
+| "delete worklog [id]" | Show entry details, ask confirmation, THEN `delete_worklog` |
+
+---
+
+## Behavioural Rules
+
+> **SAFETY — delete:** Before calling `delete_worklog`, you MUST present the worklog details
+> and ask: "Are you sure you want to delete this worklog? (yes/no)" Then wait for an explicit
+> "yes" or "confirm" in the user's reply. Never call `delete_worklog` without this step.
+
+> **SAFETY — overlaps:** During reconcile, if any proposed new entry overlaps an existing
+> worklog, STOP and present both, then ask: "Keep existing / replace existing / split?"
+> Never create, update, or delete worklogs to resolve an overlap without an explicit user
+> instruction in the same turn.
+
+- **Always confirm project** before creating or updating a worklog. Never assume.
+- **Always confirm on overlaps** — never auto-merge, auto-split, or auto-delete.
+- **Keep descriptions terse** — ≤ 100 chars. Prefer issue refs like `"Fix #42"` over prose.
+- **Omit timezone** — the server uses the user's stored preference.
+- **No running timer check** — before starting a new timer, always call `get_running_timer` first and warn if one is already active.
+- **State file** — write reconcile timestamps to `~/.codex/kadle/state.json` (create dir if needed).
