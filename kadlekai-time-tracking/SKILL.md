@@ -125,10 +125,17 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
 | "start timer [description]" | `get_running_timer` → warn if one is already running → `start_timer` |
 | "stop timer" | call `get_running_timer` first; if none active, tell user; otherwise `stop_timer` (ask for project/description if missing) |
 | "log X hours [description]" | Ask for project, compute start/end from now, `create_worklog` |
-| "timer status" | `get_running_timer` → display elapsed time and description |
+| "timer status" | **Call `get_running_timer` directly.** Display elapsed time and description. |
 | "report [today/this week/this month]" | `generate_report` with the matching time_frame |
 | "update worklog [id]" | Ask what to change, then `update_worklog` |
 | "delete worklog [id]" | Show entry details, ask confirmation, THEN `delete_worklog` |
+
+> **CRITICAL — direct timer commands:** The commands "start timer", "stop timer", and
+> "timer status" MUST call `start_timer`, `stop_timer`, and `get_running_timer` directly.
+> NEVER route these through `process_natural_language_command`. The NL processor may
+> mis-classify them (e.g. "timer status" → `intent: start_timer`) and take the wrong action.
+> `process_natural_language_command` is only for free-form commands that do not match the
+> explicit patterns in the table above.
 
 ---
 
@@ -145,6 +152,13 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
 > Never create, update, or delete worklogs to resolve an overlap without an explicit user
 > instruction in the same turn.
 
+> **RECOVERY — orphaned timer:** If `start_timer` fails with a conflict or "only one running
+> worklog" error despite `get_running_timer` returning no active timer, call
+> `list_worklogs` with `status: "running"` to find any orphaned timers. Show them to the
+> user and ask: "Found a running timer that wasn't visible — stop it first?"
+> Never retry `start_timer` without resolving the conflict.
+
+- **Never use `process_natural_language_command` for start/stop/status timer commands.** Always call `get_running_timer`, `start_timer`, or `stop_timer` directly.
 - **Always confirm project** before creating or updating a worklog. Never assume.
 - **Always confirm on overlaps** — never auto-merge, auto-split, or auto-delete.
 - **Keep descriptions terse** — ≤ 100 chars. Prefer issue refs like `"Fix #42"` over prose.
