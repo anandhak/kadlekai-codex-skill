@@ -153,10 +153,13 @@ Since Codex has no hook events, reconciliation is session-based: ask the user to
 > instruction in the same turn.
 
 > **RECOVERY — orphaned timer:** If `start_timer` fails with a conflict or "only one running
-> worklog" error despite `get_running_timer` returning no active timer, call
-> `list_worklogs` with `status: "running"` to find any orphaned timers. Show them to the
-> user and ask: "Found a running timer that wasn't visible — stop it first?"
-> Never retry `start_timer` without resolving the conflict.
+> worklog" error despite `get_running_timer` returning no active timer:
+> 1. Call `list_worklogs` with `status: "running"` to find any orphaned timers.
+> 2. If entries are returned, show them and ask: "Found a running timer that wasn't visible — stop it first?"
+> 3. If `list_worklogs` also returns empty (both endpoints disagree with the API error),
+>    tell the user: "The server reports a running timer but neither get_running_timer nor
+>    list_worklogs can see it — this is a backend visibility bug. Wait a moment and try again,
+>    or contact support if it persists." Do NOT retry `start_timer` automatically.
 
 - **Never use `process_natural_language_command` for start/stop/status timer commands.** Always call `get_running_timer`, `start_timer`, or `stop_timer` directly.
 - **Always confirm project** before creating or updating a worklog. Never assume.
